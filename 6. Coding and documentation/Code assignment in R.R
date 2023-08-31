@@ -1,6 +1,6 @@
 
 # Sets the path to the parent directory of RR classes
-setwd("Z:\\File folders\\Teaching\\Reproducible Research\\2023\\Repository\\RRcourse2023\\6. Coding and documentation")
+#setwd("Z://File folders//Teaching//Reproducible Research//2023//Repository//RRcourse2023//6. Coding and documentation")
 
 #   Import data from the O*NET database, at ISCO-08 occupation level.
 # The original data uses a version of SOC classification, but the data we load here
@@ -9,7 +9,7 @@ setwd("Z:\\File folders\\Teaching\\Reproducible Research\\2023\\Repository\\RRco
 # The O*NET database contains information for occupations in the USA, including
 # the tasks and activities typically associated with a specific occupation.
 
-task_data = read.csv("Data\\onet_tasks.csv")
+task_data = read.csv("Data//onet_tasks.csv")
 # isco08 variable is for occupation codes
 # the t_* variables are specific tasks conducted on the job
 
@@ -18,48 +18,57 @@ task_data = read.csv("Data\\onet_tasks.csv")
 # 1-digit ISCO occupation categories. (Check here for details: https://www.ilo.org/public/english/bureau/stat/isco/isco08/)
 library(readxl)                     
 
-isco1 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO1")
-isco2 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO2")
-isco3 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO3")
-isco4 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO4")
-isco5 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO5")
-isco6 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO6")
-isco7 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO7")
-isco8 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO8")
-isco9 <- read_excel("Data\\Eurostat_employment_isco.xlsx", sheet="ISCO9")
+library(readxl)
+
+# List of ISCO sheet names
+isco_sheet_names <- c("ISCO1", "ISCO2", "ISCO3", "ISCO4", "ISCO5", "ISCO6", "ISCO7", "ISCO8", "ISCO9")
+
+# Initialize an empty list to store the data frames
+isco_data_list <- list()
+
+# Loop over sheet names and import data
+for (sheet_name in isco_sheet_names) {
+  isco_data_list[[sheet_name]] <- read_excel("Data/Eurostat_employment_isco.xlsx", sheet = sheet_name)
+}
+# Combine all data frames into a single data frame
+combined_isco_data <- do.call(rbind, isco_data_list)
+
 
 # We will focus on three countries, but perhaps we could clean this code to allow it
 # to easily run for all the countries in the sample?
 
 # This will calculate worker totals in each of the chosen countries.
-total_Belgium = isco1$Belgium + isco2$Belgium + isco3$Belgium + isco4$Belgium + isco5$Belgium + isco6$Belgium + isco7$Belgium + isco8$Belgium + isco9$Belgium
-total_Spain = isco1$Spain + isco2$Spain + isco3$Spain + isco4$Spain + isco5$Spain + isco6$Spain + isco7$Spain + isco8$Spain + isco9$Spain
-total_Poland = isco1$Poland + isco2$Poland + isco3$Poland + isco4$Poland + isco5$Poland + isco6$Poland + isco7$Poland + isco8$Poland + isco9$Poland
+# Calculate totals for each country
+totals <- combined_isco_data %>%
+  summarise(
+    total_Belgium = sum(Belgium),
+    total_Spain = sum(Spain),
+    total_Poland = sum(Poland)
+  )
 
-# Let's merge all these datasets. We'll need a column that stores the occupation categories:
-isco1$ISCO <- 1
-isco2$ISCO <- 2
-isco3$ISCO <- 3
-isco4$ISCO <- 4
-isco5$ISCO <- 5
-isco6$ISCO <- 6
-isco7$ISCO <- 7
-isco8$ISCO <- 8
-isco9$ISCO <- 9
-
-# and this gives us one large file with employment in all occupations.
-all_data <- rbind(isco1, isco2, isco3, isco4, isco5, isco6, isco7, isco8, isco9)
-
+totals
 # We have 9 occupations and the same time range for each, so we an add the totals by
 # adding a vector that is 9 times the previously calculated totals
-all_data$total_Belgium <- c(total_Belgium, total_Belgium, total_Belgium, total_Belgium, total_Belgium, total_Belgium, total_Belgium, total_Belgium, total_Belgium) 
-all_data$total_Spain <- c(total_Spain, total_Spain, total_Spain, total_Spain, total_Spain, total_Spain, total_Spain, total_Spain, total_Spain) 
-all_data$total_Poland <- c(total_Poland, total_Poland, total_Poland, total_Poland, total_Poland, total_Poland, total_Poland, total_Poland, total_Poland) 
+# Now the calculated totals are repeated for each occupation within each country
+#In this code, we loop over each country and each occupation. For each combination of country and occupation, we create a new column with the name corresponding to the country's total (total_Belgium, total_Spain, total_Poland) and replicate the calculated total values 9 times (once for each occupation).
+
+
+countries <- c("Belgium", "Spain", "Poland")
+for (country in countries) {
+  for (occupation in 1:9) {  # Assuming 9 occupations
+    col_name <- paste("total_", country, sep = "")
+    combined_isco_data[col_name] <- rep(combined_isco_data[[col_name]], each = 9)  # Replicate totals 9 times
+  }
+}
+
+
+
+
 
 # And this will give us shares of each occupation among all workers in a period-country
-all_data$share_Belgium = all_data$Belgium/all_data$total_Belgium
-all_data$share_Spain = all_data$Spain/all_data$total_Spain
-all_data$share_Poland = all_data$Poland/all_data$total_Poland
+combined_isco_data$share_Belgium = combined_isco_data$Belgium/combined_isco_data$total_Belgium
+combined_isco_data$share_Spain = combined_isco_data$Spain/combined_isco_data$total_Spain
+combined_isco_data$share_Poland = combined_isco_data$Poland/combined_isco_data$total_Poland
 
 # Now let's look at the task data. We want the first digit of the ISCO variable only
 library(stringr)
@@ -85,7 +94,7 @@ aggdata$isco08 <- NULL
 #Let's combine the data.
 library(dplyr)
 
-combined <- left_join(all_data, aggdata, by = c("ISCO" = "isco08_1dig"))
+combined <- left_join(combined_isco_data, aggdata, by = c("ISCO" = "isco08_1dig"))
 
 # Traditionally, the first step is to standardise the task values using weights 
 # defined by share of occupations in the labour force. This should be done separately
@@ -166,9 +175,9 @@ combined$multip_Poland_NRCA <- (combined$std_Poland_NRCA*combined$share_Poland)
 agg_Spain <-aggregate(combined$multip_Spain_NRCA, by=list(combined$TIME),
                       FUN=sum, na.rm=TRUE)
 agg_Belgium <-aggregate(combined$multip_Belgium_NRCA, by=list(combined$TIME),
-                      FUN=sum, na.rm=TRUE)
+                        FUN=sum, na.rm=TRUE)
 agg_Poland <-aggregate(combined$multip_Poland_NRCA, by=list(combined$TIME),
-                      FUN=sum, na.rm=TRUE)
+                       FUN=sum, na.rm=TRUE)
 
 # We can plot it now!
 plot(agg_Poland$x, xaxt="n")
