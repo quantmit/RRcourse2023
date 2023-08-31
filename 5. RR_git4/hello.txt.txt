@@ -1,1 +1,1 @@
-add some textsomething
+Go to the “5. RR_git4” (i.e. the directory for today’s classes) and edit the hello.txt file inside (e.g. write the date inside, or smth).
